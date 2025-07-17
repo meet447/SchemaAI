@@ -1,6 +1,6 @@
 import asyncio
 from bs4 import BeautifulSoup
-from curl_cffi import AsyncSession # Import the asynchronous client
+from curl_cffi import AsyncSession
 import re
 
 def requires_puppeter(response_text, min_length=200):
