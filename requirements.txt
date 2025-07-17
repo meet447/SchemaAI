@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+openai
+google-genai
+googlesearch-python
+ddgs
+beautifulsoup4
+curl-cffi
+requests
