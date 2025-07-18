@@ -4,29 +4,25 @@ from config import SERVICE, MODEL
 
 async def llm_normalize(schema, data):
 
-    prompt = f"""You are a precise data extraction specialist. Your task is to extract and normalize structured data from the provided Website data.
-
-        -----------------
-        SCHEMA: {schema}
-
-        INSTRUCTIONS:
-        1. Extract ONLY factual information that directly matches the query and schema requirements
-        2. Return a valid JSON array containing up to 15 items maximum
-        3. Each item must include ALL required fields specified in the schema
-        4. Skip any items that lack required fields - do not invent missing data
-        5. Prioritize diverse sources to provide comprehensive coverage
-        6. Maintain data accuracy - extract exactly what is present in the source material
-        7. Use consistent formatting and data types as specified in the schema
-        8. If site-specific queries are involved, focus on data from those particular sources
-
-        CRITICAL RULES:
-        - Output ONLY valid JSON array format: [{{"field1":"value1", "field2":"value2"}}, ...]
-        - NO additional text, explanations, or formatting markers
-        - NO hallucination or assumption of missing information
-        - Preserve original data accuracy and context
-
-        Expected format: [{{"key":"value"}}, ...]"""
-
+    prompt = f"""You are a data extraction expert. Your task is to extract structured data from the provided text, which includes hyperlinks in the format "link text (URL)".
+    
+    WEBSITE DATA: {data}
+    -----------------
+    SCHEMA: {schema}
+    
+    INSTRUCTIONS:
+    1.  **Extract Information**: Pull out data that matches the user's query and the provided schema.
+    2.  **Preserve Links**: When you encounter text that includes a URL in parentheses, make sure to include the full text and the URL in the extracted data.
+    3.  **Complete Items Only**: Each JSON object must have all the fields specified in the schema. Do not include items that are missing required fields.
+    4.  **No Inventing Data**: Do not make up information that is not present in the text.
+    5.  **Focus on Accuracy**: Extract the data exactly as it appears in the source material.
+    
+    CRITICAL RULES:
+    - Output ONLY a valid JSON array: [{{"field1":"value1", "field2":"value2"}}, ...]
+    - NO extra text, explanations, or formatting.
+    
+    Expected format: [{{"key":"value"}}, ...]"""
+    
     try:
         messages=[
             {"role": "system", "content": prompt},
@@ -40,7 +36,7 @@ async def llm_normalize(schema, data):
 
         # Handle None content
         if content is None:
-            content = "[]"
+            content = "['error':'something went wrong']"
         else:
             try:
                 json.loads(content)
@@ -55,9 +51,9 @@ async def llm_normalize(schema, data):
                         json.loads(cleaned_content)
                         content = cleaned_content
                     except:
-                        content = "[]"
+                        content = "['error':'something went wrong']"
                 else:
-                    content = "[]"
+                    content = "['error':'something went wrong']"
         return content
     except Exception as e:
         print(f"[LLM Normalization Error] {e}")

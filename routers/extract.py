@@ -13,12 +13,13 @@ async def generate_response(request: Request, api_key: str = Depends(verify_api_
     payload = await request.json()
     url = payload.get('url')
     schema = payload.get('schema')
+    advanced = payload.get('advanced', False)
     
     if not url or not schema:
         return JSONResponse(content={'error': 'Missing query or schema parameter'}, status_code=400)
     
     try:
-        data = await extract(url)
+        data = await extract(url, advanced)
         normalized_response = await llm_normalize(schema=schema, data=data)
         
         final_data = json.dumps(normalized_response)
