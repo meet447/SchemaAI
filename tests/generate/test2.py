@@ -5,11 +5,12 @@ import sys
 async def main():
     url = "http://127.0.0.1:8000/api/generate"
 
-    query = "Upcoming Anime releases and manga releases in july"
+    query = "Current top 10 chess players in the world"
     schema = {
-        'name': "name of the product",
-        'description': "description of the product",
-        'release_date': "release date of the product"
+        'name': "string",
+        'elo': "int",
+        'rank': "int",
+        'country': "string"
     }
 
     headers = {

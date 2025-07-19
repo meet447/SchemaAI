@@ -40,7 +40,7 @@ async def llm_normalize(schema, data):
         else:
             try:
                 json.loads(content)
-            except Exception as e:
+            except Exception:
                 # Try to extract JSON array from the content
                 import re
                 match = re.search(r'\[.*\]', content, re.DOTALL)

@@ -1,6 +1,6 @@
-# SchemaAI
+# Schemely
 
-**SchemaAI** lets you turn any **natural language query** or **URL** into structured JSON data using AI-powered schema extraction.  
+**Schemely** lets you turn any **natural language query** or **URL** into structured JSON data using AI-powered schema extraction.  
 Just define what data you want — SchemaAI handles search, scraping, and structuring for you.
 
 ## What It Does
@@ -61,6 +61,7 @@ data: DONE
 ### `POST /api/extract`
 
 Extract structured data from a specific URL using a schema.
+has an advanced mode for **advanced schema extraction**.
 
 #### Request Body
 

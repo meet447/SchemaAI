@@ -1,23 +1,35 @@
 from google.genai.client import Client
-import openai
 from config import OPENROUTER_KEY
 from google.genai import types
 from config import GEMINI_API_KEY
 import json
-import re
 import asyncio
+import requests
+import httpx
 
 def generate_response(messages, model):
-    client = openai.OpenAI(
-        base_url = "https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_KEY
-    )
-
-    completion = client.chat.completions.create(
-        model=model,
-        messages=messages
-    )
-    return completion.choices[0].message.content
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+      "Authorization": f"Bearer {OPENROUTER_KEY}",
+      "Content-Type": "application/json"
+    }
+    payload = {
+      "messages": messages,
+      "model": model,
+      "stream": False,
+      "provider": {
+        "allow_fallbacks": True,
+        "sort": "latency",
+        "require_parameters": False,
+        "only": [
+          "Groq",
+          "Cerebras"
+        ]
+      }
+    }
+    
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()['choices'][0]['message']['content']
 
 def generate_response_google(messages, model):
 
@@ -53,33 +65,53 @@ def generate_response_google(messages, model):
 
 async def stream_response(messages, model):
     """Stream response from OpenRouter API"""
-    client = openai.OpenAI(
-        base_url = "https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_KEY
-    )
-
-    stream = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        stream=True
-    )
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+      "Authorization": f"Bearer {OPENROUTER_KEY}",
+      "Content-Type": "application/json"
+    }
+    payload = {
+      "messages": messages,
+      "model": model,
+      "stream": True,
+      "provider": {
+        "allow_fallbacks": True,
+        "sort": "latency",
+        "require_parameters": False,
+        "only": [
+          "Groq",
+          "Cerebras"
+        ]
+      }
+    }
 
     collected_content = ""
     processed_length = 0
 
-    for chunk in stream:
-        if chunk.choices[0].delta.content is not None:
-            content = chunk.choices[0].delta.content
-            collected_content += content
+    async with httpx.AsyncClient() as client:
+        async with client.stream("POST", url, headers=headers, json=payload) as response:
+            async for line in response.aiter_lines():
+                if line.startswith('data: '):
+                    data_str = line[6:]  # Remove 'data: ' prefix
+                    if data_str == '[DONE]':
+                        break
+                    try:
+                        data = json.loads(data_str)
+                        if 'choices' in data and len(data['choices']) > 0:
+                            delta = data['choices'][0].get('delta', {})
+                            content = delta.get('content', '')
+                            if content:
+                                collected_content += content
 
-            # Try to extract complete JSON objects as they form
-            json_objects = extract_streaming_json(collected_content, processed_length)
-            for json_obj, end_pos in json_objects:
-                yield f"data: {json.dumps(json_obj)}\n\n"
-                processed_length = end_pos
-                # ✅ FIX: Give control back to the event loop to send the chunk
-                await asyncio.sleep(0)
-
+                                # Try to extract complete JSON objects as they form
+                                json_objects = extract_streaming_json(collected_content, processed_length)
+                                for json_obj, end_pos in json_objects:
+                                    yield f"data: {json.dumps(json_obj)}\n\n"
+                                    processed_length = end_pos
+                                    # ✅ FIX: Give control back to the event loop to send the chunk
+                                    await asyncio.sleep(0)
+                    except json.JSONDecodeError:
+                        continue
 
     yield "data: DONE\n\n"
 
