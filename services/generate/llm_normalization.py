@@ -2,6 +2,20 @@ import json
 from core.llm import generate_response, generate_response_google, stream_response, stream_response_google
 from config import SERVICE, MODEL
 
+def format_sources_for_prompt(sources):
+    formatted = ""
+    for i, item in enumerate(sources, 1):
+        url = item.get("url", "N/A")
+        snippet = item.get("snippet", "").strip()
+        text = item.get("text", "").strip().replace("\n", " ")
+
+        formatted += f"""Source {i}:
+            - URL: {url}
+            - Snippet: {snippet}
+            - Text: {text}
+             """
+    return formatted
+
 async def llm_normalize(query, schema, data):
 
     prompt = f"""You are a precise data extraction specialist. Your task is to extract and normalize structured data from the provided search results.
@@ -29,9 +43,11 @@ async def llm_normalize(query, schema, data):
         Expected format: [{{"key":"value"}}, ...]"""
 
     try:
+        formatted_data = format_sources_for_prompt(json.load(data))
+        
         messages=[
             {"role": "system", "content": prompt},
-            {"role": "user", "content": str(data)}
+            {"role": "user", "content": formatted_data}
         ]
 
         if SERVICE == "GOOGLE":
